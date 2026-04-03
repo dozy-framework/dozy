@@ -2,6 +2,8 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
+    // TODO: `optimize` to be used when building SDL
+    _ = b.standardOptimizeOption(.{});
 
     const mod = b.addModule("dozy", .{
         .root_source_file = b.path("src/root.zig"),
