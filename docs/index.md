@@ -1,5 +1,9 @@
 # Dozy - User Documentation
 
+## License
+
+dozy is under [MIT License](../LICENSE).
+
 ## Prerequisites
 
 * Zig (version: v0.15.2)
@@ -74,3 +78,7 @@ pub fn main() void {
     dozy.start();
 }
 ```
+
+## Including license notices in projects
+
+dozy and its dependencies usually have license notices. To cover all license notices, grep all files in this repo that has `LICENSE`, `OFL` etc in its name.
