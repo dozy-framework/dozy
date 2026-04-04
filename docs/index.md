@@ -7,7 +7,7 @@ dozy is under [MIT License](../LICENSE).
 ## Prerequisites
 
 * Zig (version: v0.15.2)
-* Cmake
+* Cmake (for SDL)
 
 ## Setup dozy in your project
 
