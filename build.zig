@@ -60,6 +60,7 @@ pub fn linkExternalLibrariesForExe(game_exe: *std.Build.Step.Compile, dozy_exter
 
     game_exe.addLibraryPath(dozy_external_steps.artifact_path);
     game_exe.linkSystemLibrary("SDL3");
+    game_exe.linkLibC();
 }
 
 pub fn build(b: *std.Build) void {
@@ -71,7 +72,6 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         // needed only for tests
         .target = target,
-        .link_libc = true,
     });
 
     const include_dir = b.path("external/SDL/include");
