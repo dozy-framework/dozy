@@ -75,12 +75,14 @@ pub fn build(b: *std.Build) void {
     // dozy uses external libraries for some of the features,
     // which also needs to be built, their artifacts linked
     // and copied to the correct location
-    const dozy_external_libraries = dozy.setupExternalLibraries(b, dozy_dep);
+    const dozy_external_steps = dozy.addExternalLibrariesSteps(b, dozy_dep);
 
-    // build dozy external dependencies before building the exe
-    game_exe.step.dependOn(dozy_external_libraries.external_build_step);
-    // install dozy external depedencies before installing the exe
-    b.getInstallStep().dependOn(dozy_external_libraries.external_install_step);
+    // copies all external dynamic library artifacts used by dozy
+    // to the install directory
+    dozy.linkExternalLibrariesForExe(game_exe, dozy_external_steps);
+    // ensure that the external libraries are built before the
+    // game executable is compiled and linked against the libraries
+    dozy.installExternalLibraries(b, dozy_external_steps);
 
     // ...
 }

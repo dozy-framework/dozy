@@ -1,13 +1,17 @@
 const std = @import("std");
 
-pub const SetupExternalLibrariesResult = struct {
+pub const AddExternalLibrariesStepsResult = struct {
+    artifact_path: std.Build.LazyPath,
     external_build_step: *std.Build.Step,
     external_install_step: *std.Build.Step,
 };
 
-pub fn setupExternalLibraries(b: *std.Build, dep: *std.Build.Dependency) SetupExternalLibrariesResult {
+/// Setup the steps required for building the external libraries
+pub fn addExternalLibrariesSteps(b: *std.Build, dep: *std.Build.Dependency) AddExternalLibrariesStepsResult {
     const source_dir = dep.path("external/SDL");
     const build_dir = dep.path("cmake-out/sdl");
+    // TODO: use optimize?
+    const artifact_dir = dep.path("cmake-out/sdl/Debug");
 
     const configure_run = b.addSystemCommand(&.{
         "cmake",
@@ -37,9 +41,25 @@ pub fn setupExternalLibraries(b: *std.Build, dep: *std.Build.Dependency) SetupEx
     external_install_step.dependOn(&install_run.step);
 
     return .{
+        .artifact_path = artifact_dir,
         .external_build_step = external_build_step,
         .external_install_step = external_install_step,
     };
+}
+
+/// Copies all external dynamic library artifacts used by dozy
+/// to the install directory.
+pub fn installExternalLibraries(b: *std.Build, dozy_external_steps: AddExternalLibrariesStepsResult) void {
+    b.getInstallStep().dependOn(dozy_external_steps.external_install_step);
+}
+
+/// Ensure that the external libraries are built before the
+/// game executable is compiled and linked against the libraries.
+pub fn linkExternalLibrariesForExe(game_exe: *std.Build.Step.Compile, dozy_external_steps: AddExternalLibrariesStepsResult) void {
+    game_exe.step.dependOn(dozy_external_steps.external_build_step);
+
+    game_exe.addLibraryPath(dozy_external_steps.artifact_path);
+    game_exe.linkSystemLibrary("SDL3");
 }
 
 pub fn build(b: *std.Build) void {
@@ -51,7 +71,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         // needed only for tests
         .target = target,
+        .link_libc = true,
     });
+
+    const include_dir = b.path("external/SDL/include");
+    mod.addIncludePath(include_dir);
 
     const mod_tests = b.addTest(.{
         .root_module = mod,
