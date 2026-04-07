@@ -7,6 +7,7 @@ dozy is under [MIT License](../LICENSE).
 ## Prerequisites
 
 * Zig (version: v0.15.2)
+* Cmake (for SDL)
 
 ## Setup dozy in your project
 
@@ -33,9 +34,13 @@ git submodule add git@github.com:dozy-framework/dozy.git
 3. In `build.zig`, inject your library to the modules that uses dozy. For example, if you have an entry exe and game lib, both are likely to need dozy as an import.
 
 ```zig
+const std = @import("std");
+const dozy = @import("dozy");
+
 pub fn build(b: *std.Build) void {
     // ...
 
+    // add dozy as a dependency
     const dozy_dep = b.dependency("dozy", .{
         .target = target,
         .optimize = optimize,
@@ -45,7 +50,10 @@ pub fn build(b: *std.Build) void {
     const game_mod = b.addModule("game", .{ 
         // ...
         .imports = &.{
+            // game mod contains all game logic, so
+            // the import to dozy needs to be setup
             .{ .name = "dozy", .module = dozy_mod },
+
             // ...
         }
     });
@@ -55,11 +63,26 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             // ...
             .imports = &.{
+                // game entry just calls the dozy entry logic,
+                // so it needs the import to dozy too
                 .{ .name = "dozy", .module = dozy_mod },
+
                 // ...
             },
         }),
     });
+
+    // dozy uses external libraries for some of the features,
+    // which also needs to be built, their artifacts linked
+    // and copied to the correct location
+    const dozy_external_steps = dozy.addExternalLibrariesSteps(b, dozy_dep);
+
+    // ensure that the external libraries are built before the
+    // game executable is compiled and linked against the libraries
+    dozy.linkExternalLibrariesForExe(game_exe, dozy_external_steps);
+    // copies all external dynamic library artifacts used by dozy
+    // to the install directory
+    dozy.installExternalLibraries(b, dozy_external_steps);
 
     // ...
 }
