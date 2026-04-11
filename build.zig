@@ -1,4 +1,5 @@
 const std = @import("std");
+const pkg = @import("build.zig.zon");
 
 pub const AddExternalLibrariesStepsResult = struct {
     artifact_path: std.Build.LazyPath,
@@ -94,6 +95,11 @@ pub fn build(b: *std.Build) void {
 
     const include_dir = b.path("external/SDL/include");
     mod.addIncludePath(include_dir);
+
+    // allow module to access package version
+    const options = b.addOptions();
+    options.addOption([]const u8, "version", pkg.version);
+    mod.addOptions("build_options", options);
 
     const mod_tests = b.addTest(.{
         .root_module = mod,

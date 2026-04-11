@@ -1,13 +1,13 @@
 const std = @import("std");
 const sdl = @import("sdl.zig");
+const build_options = @import("build_options");
 
 pub fn start() void {
     reportVersions();
 }
 
 fn reportVersions() void {
-    // TODO: report dozy's version
-    std.log.info("dozy version: unknown", .{});
+    std.log.info("dozy version: {s}", .{build_options.version});
 
     const compiled_version = sdl.getSdlCompiledVersion();
     std.log.info("SDL compiled version: {d}.{d}.{d}", .{ compiled_version.major, compiled_version.minor, compiled_version.micro });
