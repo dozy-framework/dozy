@@ -17,3 +17,8 @@ pub fn start() void {
 test "dummy test" {
     try std.testing.expect(3 + 7 == 10);
 }
+
+test {
+    // ensure that tests inside what we imported are also being run
+    std.testing.refAllDeclsRecursive(@This());
+}

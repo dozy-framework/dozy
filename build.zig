@@ -8,10 +8,28 @@ pub const AddExternalLibrariesStepsResult = struct {
 
 /// Setup the steps required for building the external libraries
 pub fn addExternalLibrariesSteps(b: *std.Build, dep: *std.Build.Dependency) AddExternalLibrariesStepsResult {
-    const source_dir = dep.path("external/SDL");
-    const build_dir = dep.path("cmake-out/sdl");
+    return addExternalLibrariesStepsCommon(b, dep);
+}
+
+const CommonResolver = struct {
+    fn resolve(b: *std.Build, dep: ?*std.Build.Dependency, path: []const u8) std.Build.LazyPath {
+        if (dep) |d| {
+            return d.path(path);
+        } else {
+            return b.path(path);
+        }
+    }
+};
+
+/// This method is needed because our tests also need these external
+/// libraries, but they don't use `dep`, unlike normal game executable,
+/// which would just be calling `addExternalLibrariesSteps()` normally.
+fn addExternalLibrariesStepsCommon(b: *std.Build, dep: ?*std.Build.Dependency) AddExternalLibrariesStepsResult {
+    const source_dir = CommonResolver.resolve(b, dep, "external/SDL");
+    const build_dir = CommonResolver.resolve(b, dep, "cmake-out/sdl");
     // TODO: use optimize?
-    const artifact_dir = dep.path("cmake-out/sdl/Debug");
+    const artifact_dir = CommonResolver.resolve(b, dep, "cmake-out/sdl/Debug");
+    const sdl3_artifact_file = CommonResolver.resolve(b, dep, "cmake-out/sdl/Debug/SDL3.dll");
 
     const configure_run = b.addSystemCommand(&.{
         "cmake",
@@ -30,7 +48,7 @@ pub fn addExternalLibrariesSteps(b: *std.Build, dep: *std.Build.Dependency) AddE
 
     build_run.step.dependOn(&configure_run.step);
 
-    const install_run = b.addInstallFileWithDir(dep.path("cmake-out/sdl/Debug/SDL3.dll"), .prefix, "bin/SDL3.dll");
+    const install_run = b.addInstallFileWithDir(sdl3_artifact_file, .prefix, "bin/SDL3.dll");
 
     install_run.step.dependOn(&build_run.step);
 
@@ -81,6 +99,19 @@ pub fn build(b: *std.Build) void {
         .root_module = mod,
     });
     const run_mod_tests = b.addRunArtifact(mod_tests);
+
+    // our tests are technically also executables, so they also
+    // needed the external dependencies to be built and linked
+    // just like a normal game executable
+    const dozy_external_steps = addExternalLibrariesStepsCommon(b, null);
+
+    linkExternalLibrariesForExe(mod_tests, dozy_external_steps);
+    // normally, we will use `installExternalLibraries()` here. However zig test
+    // executables are output at `/.zig-cache` instead of `/zig-out`, AND we
+    // aren't given the location of the test exe's directory, so the logic of
+    // `installExternalLibraries()` won't work here. Instead, let's just add
+    // the cmake output folder to PATH
+    run_mod_tests.addPathDir(dozy_external_steps.artifact_path.getPath(b));
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
